@@ -654,11 +654,11 @@ QRadioButton::indicator:unchecked {background-color:red;}</string>
       <x>40</x>
       <y>230</y>
       <width>111</width>
-      <height>16</height>
+      <height>21</height>
      </rect>
     </property>
     <property name="text">
-     <string>modbus自动测试</string>
+     <string>收发自动测试</string>
     </property>
    </widget>
    <widget class="QPushButton" name="clear_recv_cmp_btn">

@@ -221,6 +221,42 @@ MainWindow::MainWindow(QWidget *parent) :
      ui->comboBox_flowBit->addItem(tr("XON/XOFF"), QSerialPort::SoftwareControl);
 }
 
+void MainWindow::scan_port()
+{
+    QString description;
+    QString manufacturer;
+    QString serialNumber;
+
+
+    //获取可以用的串口
+    QList<QSerialPortInfo> serialPortInfos = QSerialPortInfo::availablePorts();
+
+    QStringList list;
+    //输出当前系统可以使用的串口个数
+    qDebug() << "Total numbers of ports: " << serialPortInfos.count();
+
+    //将所有可以使用的串口设备添加到ComboBox中
+    for (const QSerialPortInfo &serialPortInfo : serialPortInfos)
+    {
+
+        description = serialPortInfo.description();
+        manufacturer = serialPortInfo.manufacturer();
+        serialNumber = serialPortInfo.serialNumber();
+
+        list << serialPortInfo.portName();
+        /*list << serialPortInfo.portName()
+             << (!description.isEmpty() ? description : "")
+             << (!manufacturer.isEmpty() ? manufacturer : "")
+             << (!serialNumber.isEmpty() ? serialNumber : "")
+             << serialPortInfo.systemLocation()
+             << (serialPortInfo.vendorIdentifier() ? QString::number(serialPortInfo.vendorIdentifier(), 16) : "")
+             << (serialPortInfo.productIdentifier() ? QString::number(serialPortInfo.productIdentifier(), 16) : "");*/
+
+    }
+    qSort(list.begin(),list.end());
+    ui->comboBox_serialPort->addItems(list);
+
+}
 
 void MainWindow::check_open_port()
 {
@@ -238,9 +274,9 @@ void MainWindow::check_open_port()
     ui->btn_openConsole->setText(tr("打开串口"));
     ui->comboBox_serialPort->clear();
     ui->stat_r_btn->setChecked(false);
-    this->CloseSerialPort();
+    CloseSerialPort();
     disconnect(serial, &QSerialPort::readyRead, this, &MainWindow::readData);
-    this->scan_port();
+    scan_port();
     stop_timer();
     if(modbus_send_timer.isActive()){
         modbus_send_timer.stop();
@@ -252,40 +288,6 @@ void MainWindow::check_open_port()
     enable_widget(false);
     QMessageBox::critical(this, tr("Error"), "串口连接中断，请检查是否正确连接！");
 }
-
-void MainWindow::scan_port()
-{
-    QString description;
-    QString manufacturer;
-    QString serialNumber;
-
-
-    //获取可以用的串口
-    QList<QSerialPortInfo> serialPortInfos = QSerialPortInfo::availablePorts();
-
-    //输出当前系统可以使用的串口个数
-    qDebug() << "Total numbers of ports: " << serialPortInfos.count();
-
-    //将所有可以使用的串口设备添加到ComboBox中
-    for (const QSerialPortInfo &serialPortInfo : serialPortInfos)
-    {
-        QStringList list;
-        description = serialPortInfo.description();
-        manufacturer = serialPortInfo.manufacturer();
-        serialNumber = serialPortInfo.serialNumber();
-
-        list << serialPortInfo.portName()
-             << (!description.isEmpty() ? description : "")
-             << (!manufacturer.isEmpty() ? manufacturer : "")
-             << (!serialNumber.isEmpty() ? serialNumber : "")
-             << serialPortInfo.systemLocation()
-             << (serialPortInfo.vendorIdentifier() ? QString::number(serialPortInfo.vendorIdentifier(), 16) : "")
-             << (serialPortInfo.productIdentifier() ? QString::number(serialPortInfo.productIdentifier(), 16) : "");
-        ui->comboBox_serialPort->addItem(list.first(), list);
-    }
-
-}
-
 
 MainWindow::~MainWindow()
 {
@@ -341,17 +343,18 @@ void MainWindow::readData()
         }else{
             read_str = tr(buf);
             if(recv_with_time_stamp){
-                read_str.insert(read_str.indexOf('\n'),time_str);
+                read_str = read_str.trimmed();
+                read_str += time_str + "\n";
             }
-            //read_str = read_str.trimmed();
         }
-
-        //ui->textEdit_recv->clear();
 
         if(false == modbus_test_switch)
         {
+            //非自动测试才计数
             ui->textEdit_recv->insertPlainText(read_str);
             ui->textEdit_recv->moveCursor(QTextCursor::End);
+            ui->label_count_rfm->setText(QString::number(recv_frames));
+            ui->label_count_rb->setText(QString::number(recv_bytes));
         }
         else{
             line_str = GetlLineString(cmp_str,cmp_send_index - 1);
